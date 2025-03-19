@@ -1,10 +1,11 @@
 body {
     background-color: #171717;
     color: white;
-    font-family: Arial, sans-serif;
+    font-family: "Segoe UI", Arial, sans-serif;
     text-align: center;
-    padding-top: 60px;
     margin: 0;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .navbar {
@@ -15,6 +16,7 @@ body {
     background-color: #222;
     padding: 15px 0;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 1100;
 }
 
 .navbar nav {
@@ -52,6 +54,28 @@ body {
     border-radius: 5px;
 }
 
+.logo-button {
+    padding: 5px !important;
+    background: none !important;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.logo-button:hover {
+    background: none !important;
+}
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    transform: scale(3);
+    transform-origin: left center;
+}
+
 .container {
     display: none;
 }
@@ -60,6 +84,7 @@ body {
     margin-top: 20px;
     padding: 20px;
     transition: margin-left 0.3s;
+    margin-left: 50px;
 }
 
 .content.shifted {
@@ -67,29 +92,37 @@ body {
 }
 
 .nav-button {
-    background-color: #444;
+    background-color: #222;
     color: white;
     border: none;
-    padding: 8px 12px;
+    padding: 5px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
     font-weight: bold;
     transition: 0.3s;
-    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .nav-button:hover {
-    background-color: #666;
+    background-color: #444;
+}
+
+.menu-icon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
 }
 
 /* Yan Menü Stili */
 .side-menu {
     position: fixed;
-    left: -250px;
-    top: 60px;
+    left: -200px;
+    top: 70px;
     width: 250px;
-    height: 100%;
+    height: calc(100% - 70px);
     background-color: #222;
     transition: 0.3s;
     overflow-y: auto;
@@ -105,22 +138,168 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
+    transition: 0.3s;
 }
 
 .side-menu li {
     padding: 0;
+    margin: 5px 0;
     border-bottom: 1px solid #333;
 }
 
 .side-menu a {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 15px 20px;
     color: white;
     text-decoration: none;
     transition: 0.3s;
+    border-radius: 10px;
+    gap: 15px;
+    font-size: 20px;
+    font-family: "Segoe UI", "SF Pro Display", Arial, sans-serif;
+    font-weight: 500;
+    width: calc(100% - 40px);
+    justify-content: flex-start;
 }
 
 .side-menu a:hover {
     background-color: #444;
+}
+
+.menu-item-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding-top: 0;
+    box-sizing: border-box;
+    margin-top: -30px; /* Navbar'ın yarattığı boşluğu dengelemek için */
+}
+
+.login-form {
+    background-color: #222;
+    padding: 25px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: white;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: left;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    background-color: #444;
+}
+
+.forgot-password {
+    display: block;
+    text-align: right;
+    color: #4a9eff;
+    text-decoration: none;
+    margin: 10px 0 15px 0;
+    font-size: 14px;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+.login-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #4a9eff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: background-color 0.3s;
+}
+
+.login-button:hover {
+    background-color: #357abd;
+}
+
+.register-link {
+    text-align: center;
+    color: white;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.register-link a {
+    color: #4a9eff;
+    text-decoration: none;
+}
+
+.register-link a:hover {
+    text-decoration: underline;
+}
+
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-container input {
+    padding-right: 40px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-password img {
+    width: 24px;
+    height: 24px;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.toggle-password:hover img {
+    opacity: 1;
 }
 
