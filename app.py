@@ -1,0 +1,110 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
+app = Flask(__name__)
+app.secret_key = 'your-secret-key'  # Session için gerekli, güvenli bir değer kullanın
+
+# PostgreSQL bağlantı bilgileri
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1035@localhost:5432/blueM'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# SQLAlchemy ve LoginManager başlatma
+db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Kullanıcı modeli
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'  # Tablo adını açıkça belirtiyoruz
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Ana sayfa
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+# Login sayfası
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+        
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('index'))
+        else:
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+# Register sayfası
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+        
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirmPassword')
+        
+        print(f"Kayıt denemesi - Email: {email}")  # Debug için
+        
+        # E-posta kontrolü
+        user_exists = User.query.filter_by(email=email).first()
+        print(f"Kullanıcı var mı: {user_exists}")  # Debug için
+        
+        if user_exists:
+            flash('Bu e-posta adresi zaten kayıtlı!', 'error')
+            return redirect(url_for('register'))
+        
+        # Şifre kontrolü
+        if password != confirm_password:
+            flash('Şifreler eşleşmiyor!', 'error')
+            return redirect(url_for('register'))
+        
+        try:
+            # Yeni kullanıcı oluştur
+            hashed_password = generate_password_hash(password)
+            new_user = User(email=email, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
+            
+            print(f"Yeni kullanıcı başarıyla oluşturuldu - ID: {new_user.id}")  # Debug için
+            
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            print(f"Database error: {str(e)}")  # Detaylı hata mesajı
+            db.session.rollback()
+            flash('Kayıt sırasında bir hata oluştu!', 'error')
+            return redirect(url_for('register'))
+    
+    return render_template('register.html')
+
+# Çıkış yap
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()  # Tablolar yoksa oluştur
+    app.run(debug=True) 

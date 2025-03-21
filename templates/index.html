@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ana Sayfa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <nav>
+            <ul>
+                <li><button id="menuToggle" class="nav-button"><img src="{{ url_for('static', filename='images/buttonMenu.png') }}" alt="Menü" class="menu-icon"></button></li>
+                <li><a href="{{ url_for('index') }}" class="logo-button"><img src="{{ url_for('static', filename='images/buttonLogo.png') }}" alt="Logo" class="logo-icon"></a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <div id="sideMenu" class="side-menu">
+        <ul>
+            <li><a href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='images/buttonHomePage.png') }}" alt="Ana Sayfa" class="menu-item-icon">
+                <span>Ana Sayfa</span>
+            </a></li>
+            <li><a href="#">
+                <img src="{{ url_for('static', filename='images/buttonLibrary.png') }}" alt="Kitaplık" class="menu-item-icon">
+                <span>Kitaplık</span>
+            </a></li>
+        </ul>
+    </div>
+    
+    <div class="content">
+        <!-- Sayfa içeriği buraya gelecek -->
+    </div>
+
+    <script>
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            const sideMenu = document.getElementById('sideMenu');
+            const content = document.querySelector('.content');
+            sideMenu.classList.toggle('active');
+            content.classList.toggle('shifted');
+        });
+    </script>
+</body>
+</html>

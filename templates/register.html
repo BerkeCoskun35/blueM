@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayıt Ol</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}" class="logo-button"><img src="{{ url_for('static', filename='images/buttonLogo.png') }}" alt="Logo" class="logo-icon"></a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <div class="content">
+        <div class="login-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form class="login-form" method="POST" action="{{ url_for('register') }}" novalidate>
+                <div class="form-group">
+                    <label for="email">E-posta</label>
+                    <input type="email" id="email" name="email" placeholder=" " required
+                           oninvalid="this.setCustomValidity('Lütfen geçerli bir e-posta adresi girin')"
+                           oninput="this.setCustomValidity('')">
+                </div>
+                <div class="form-group">
+                    <label for="password">Şifre</label>
+                    <div class="password-container">
+                        <input type="password" id="password" name="password" placeholder=" " minlength="6" required
+                               oninvalid="this.setCustomValidity('Şifre en az 6 karakter olmalıdır')"
+                               oninput="this.setCustomValidity('')">
+                        <button type="button" id="togglePassword" class="toggle-password">
+                            <img src="{{ url_for('static', filename='images/buttonShowPw.png') }}" alt="Şifreyi Göster" class="toggle-password-icon">
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Şifre Tekrar</label>
+                    <div class="password-container">
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder=" " minlength="6" required
+                               oninvalid="this.setCustomValidity('Şifreler eşleşmiyor')"
+                               oninput="this.setCustomValidity('')">
+                        <button type="button" id="toggleConfirmPassword" class="toggle-password">
+                            <img src="{{ url_for('static', filename='images/buttonShowPw.png') }}" alt="Şifreyi Göster" class="toggle-password-icon">
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="login-button">Kayıt Ol</button>
+                <div class="register-link">
+                    <span>Zaten bir hesabın var mı? </span>
+                    <a href="{{ url_for('login') }}">Giriş Yap</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const form = document.querySelector('.login-form');
+        const email = document.getElementById('email');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const togglePassword = document.getElementById('togglePassword');
+        const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+
+        // Form gönderilmeden önce kontrol
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+
+            // E-posta kontrolü
+            if (email.validity.typeMismatch) {
+                email.setCustomValidity('Lütfen geçerli bir e-posta adresi girin');
+                isValid = false;
+            } else if (email.validity.valueMissing) {
+                email.setCustomValidity('E-posta adresi gerekli');
+                isValid = false;
+            } else {
+                email.setCustomValidity('');
+            }
+
+            // Şifre kontrolü
+            if (password.validity.valueMissing) {
+                password.setCustomValidity('Şifre gerekli');
+                isValid = false;
+            } else if (password.validity.tooShort) {
+                password.setCustomValidity('Şifre en az 6 karakter olmalıdır');
+                isValid = false;
+            } else {
+                password.setCustomValidity('');
+            }
+
+            // Şifre tekrar kontrolü
+            if (confirmPassword.validity.valueMissing) {
+                confirmPassword.setCustomValidity('Şifre tekrarı gerekli');
+                isValid = false;
+            } else if (password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('Şifreler eşleşmiyor');
+                isValid = false;
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+
+            if (!isValid) {
+                event.preventDefault();
+            }
+        });
+
+        // E-posta doğrulama
+        email.addEventListener('input', function() {
+            if (email.validity.typeMismatch) {
+                email.setCustomValidity('Lütfen geçerli bir e-posta adresi girin');
+            } else if (email.validity.valueMissing) {
+                email.setCustomValidity('E-posta adresi gerekli');
+            } else {
+                email.setCustomValidity('');
+            }
+        });
+
+        // Şifre doğrulama
+        password.addEventListener('input', function() {
+            if (password.validity.valueMissing) {
+                password.setCustomValidity('Şifre gerekli');
+            } else if (password.validity.tooShort) {
+                password.setCustomValidity('Şifre en az 6 karakter olmalıdır');
+            } else {
+                password.setCustomValidity('');
+            }
+            checkPasswordMatch();
+        });
+
+        // Şifre tekrar doğrulama
+        confirmPassword.addEventListener('input', function() {
+            if (confirmPassword.validity.valueMissing) {
+                confirmPassword.setCustomValidity('Şifre tekrarı gerekli');
+            } else {
+                checkPasswordMatch();
+            }
+        });
+
+        // Şifrelerin eşleşmesini kontrol et
+        function checkPasswordMatch() {
+            if (password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('Şifreler eşleşmiyor');
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+        }
+
+        // Şifre göster/gizle - İlk şifre alanı
+        togglePassword.addEventListener('mousedown', function() {
+            password.type = 'text';
+        });
+
+        togglePassword.addEventListener('mouseup', function() {
+            password.type = 'password';
+        });
+
+        togglePassword.addEventListener('mouseleave', function() {
+            password.type = 'password';
+        });
+
+        // Şifre göster/gizle - Şifre tekrar alanı
+        toggleConfirmPassword.addEventListener('mousedown', function() {
+            confirmPassword.type = 'text';
+        });
+
+        toggleConfirmPassword.addEventListener('mouseup', function() {
+            confirmPassword.type = 'password';
+        });
+
+        toggleConfirmPassword.addEventListener('mouseleave', function() {
+            confirmPassword.type = 'password';
+        });
+    </script>
+</body>
+</html> 
