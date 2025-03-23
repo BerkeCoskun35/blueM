@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+import re
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'  # Session için gerekli, güvenli bir değer kullanın
@@ -42,12 +43,22 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         
+        if not email:
+            flash('E-posta adresi gerekli!', 'error')
+            return redirect(url_for('login'))
+            
+        if not password:
+            flash('Şifre gerekli!', 'error')
+            return redirect(url_for('login'))
+        
         user = User.query.filter_by(email=email).first()
         
         if user and check_password_hash(user.password, password):
             login_user(user)
+            flash('Başarıyla giriş yaptınız!', 'success')
             return redirect(url_for('index'))
         else:
+            flash('E-posta veya şifre hatalı!', 'error')
             return redirect(url_for('login'))
     
     return render_template('login.html')
@@ -63,17 +74,34 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirmPassword')
         
-        print(f"Kayıt denemesi - Email: {email}")  # Debug için
+        if not email:
+            flash('E-posta adresi gerekli!', 'error')
+            return redirect(url_for('register'))
+            
+        if not password:
+            flash('Şifre gerekli!', 'error')
+            return redirect(url_for('register'))
+            
+        if not confirm_password:
+            flash('Şifre tekrarı gerekli!', 'error')
+            return redirect(url_for('register'))
+        
+        # E-posta formatı kontrolü
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            flash('Geçerli bir e-posta adresi girin!', 'error')
+            return redirect(url_for('register'))
         
         # E-posta kontrolü
         user_exists = User.query.filter_by(email=email).first()
-        print(f"Kullanıcı var mı: {user_exists}")  # Debug için
-        
         if user_exists:
             flash('Bu e-posta adresi zaten kayıtlı!', 'error')
             return redirect(url_for('register'))
         
         # Şifre kontrolü
+        if len(password) < 6:
+            flash('Şifre en az 6 karakter olmalıdır!', 'error')
+            return redirect(url_for('register'))
+            
         if password != confirm_password:
             flash('Şifreler eşleşmiyor!', 'error')
             return redirect(url_for('register'))
@@ -85,17 +113,21 @@ def register():
             db.session.add(new_user)
             db.session.commit()
             
-            print(f"Yeni kullanıcı başarıyla oluşturuldu - ID: {new_user.id}")  # Debug için
-            
+            flash('Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'success')
             return redirect(url_for('login'))
             
         except Exception as e:
-            print(f"Database error: {str(e)}")  # Detaylı hata mesajı
             db.session.rollback()
             flash('Kayıt sırasında bir hata oluştu!', 'error')
             return redirect(url_for('register'))
     
     return render_template('register.html')
+
+# Profil sayfası
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html')
 
 # Çıkış yap
 @app.route('/logout')

@@ -53,70 +53,70 @@
     </div>
 
     <script>
-        const form = document.querySelector('.login-form');
-        const email = document.getElementById('email');
-        const password = document.getElementById('password');
-        const togglePassword = document.getElementById('togglePassword');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sayfa yüklendiğinde tüm hata mesajlarını gizle
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.display = 'none';
+            });
 
-        // Form gönderilmeden önce kontrol
-        form.addEventListener('submit', function(event) {
-            let isValid = true;
+            // Flash mesajları varsa göster ve 5 saniye sonra gizle
+            alerts.forEach(alert => {
+                if (alert.textContent.trim() !== '') {
+                    alert.style.display = 'flex';
+                    setTimeout(() => {
+                        alert.style.opacity = '1';
+                        alert.style.transition = 'opacity 0.5s ease';
+                        setTimeout(() => {
+                            alert.style.opacity = '0';
+                            setTimeout(() => {
+                                alert.style.display = 'none';
+                            }, 500);
+                        }, 5000);
+                    }, 100);
+                }
+            });
 
-            // E-posta kontrolü
-            if (email.validity.typeMismatch) {
-                email.setCustomValidity('Lütfen geçerli bir e-posta adresi girin');
-                isValid = false;
-            } else if (email.validity.valueMissing) {
-                email.setCustomValidity('E-posta adresi gerekli');
-                isValid = false;
-            } else {
-                email.setCustomValidity('');
-            }
+            // Form doğrulama kodları
+            const form = document.querySelector('form');
+            const emailInput = document.querySelector('input[type="email"]');
+            const passwordInput = document.querySelector('input[type="password"]');
+            const togglePassword = document.getElementById('togglePassword');
 
-            // Şifre kontrolü
-            if (password.validity.valueMissing) {
-                password.setCustomValidity('Şifre gerekli');
-                isValid = false;
-            } else {
-                password.setCustomValidity('');
-            }
+            // Form gönderilmeden önce kontrol
+            form.addEventListener('submit', function(event) {
+                let isValid = true;
 
-            if (!isValid) {
-                event.preventDefault();
-            }
-        });
+                // E-posta kontrolü
+                if (!emailInput.value) {
+                    isValid = false;
+                } else if (!emailInput.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                    isValid = false;
+                }
 
-        // E-posta doğrulama
-        email.addEventListener('input', function() {
-            if (email.validity.typeMismatch) {
-                email.setCustomValidity('Lütfen geçerli bir e-posta adresi girin');
-            } else if (email.validity.valueMissing) {
-                email.setCustomValidity('E-posta adresi gerekli');
-            } else {
-                email.setCustomValidity('');
-            }
-        });
+                // Şifre kontrolü
+                if (!passwordInput.value) {
+                    isValid = false;
+                }
 
-        // Şifre doğrulama
-        password.addEventListener('input', function() {
-            if (password.validity.valueMissing) {
-                password.setCustomValidity('Şifre gerekli');
-            } else {
-                password.setCustomValidity('');
-            }
-        });
+                if (isValid) {
+                    return true;
+                }
+            });
 
-        // Şifre göster/gizle
-        togglePassword.addEventListener('mousedown', function() {
-            password.type = 'text';
-        });
+            // Şifre görünürlük kontrolü
+            togglePassword.addEventListener('mousedown', function() {
+                passwordInput.type = 'text';
+            });
 
-        togglePassword.addEventListener('mouseup', function() {
-            password.type = 'password';
-        });
+            togglePassword.addEventListener('mouseup', function() {
+                passwordInput.type = 'password';
+            });
 
-        togglePassword.addEventListener('mouseleave', function() {
-            password.type = 'password';
+            // Sayfa dışına tıklandığında şifre gizleme
+            document.addEventListener('mouseup', function() {
+                passwordInput.type = 'password';
+            });
         });
     </script>
 </body>

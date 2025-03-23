@@ -63,120 +63,91 @@
     </div>
 
     <script>
-        const form = document.querySelector('.login-form');
-        const email = document.getElementById('email');
-        const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('confirmPassword');
-        const togglePassword = document.getElementById('togglePassword');
-        const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sayfa yüklendiğinde tüm hata mesajlarını gizle
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.display = 'none';
+            });
 
-        // Form gönderilmeden önce kontrol
-        form.addEventListener('submit', function(event) {
-            let isValid = true;
+            // Flash mesajları varsa göster ve 5 saniye sonra gizle
+            alerts.forEach(alert => {
+                if (alert.textContent.trim() !== '') {
+                    alert.style.display = 'flex';
+                    setTimeout(() => {
+                        alert.style.opacity = '1';
+                        alert.style.transition = 'opacity 0.5s ease';
+                        setTimeout(() => {
+                            alert.style.opacity = '0';
+                            setTimeout(() => {
+                                alert.style.display = 'none';
+                            }, 500);
+                        }, 5000);
+                    }, 100);
+                }
+            });
 
-            // E-posta kontrolü
-            if (email.validity.typeMismatch) {
-                email.setCustomValidity('Lütfen geçerli bir e-posta adresi girin');
-                isValid = false;
-            } else if (email.validity.valueMissing) {
-                email.setCustomValidity('E-posta adresi gerekli');
-                isValid = false;
-            } else {
-                email.setCustomValidity('');
-            }
+            // Form doğrulama kodları
+            const form = document.querySelector('form');
+            const emailInput = document.querySelector('input[type="email"]');
+            const passwordInput = document.querySelector('input[type="password"]');
+            const confirmPasswordInput = document.querySelector('input[name="confirmPassword"]');
 
-            // Şifre kontrolü
-            if (password.validity.valueMissing) {
-                password.setCustomValidity('Şifre gerekli');
-                isValid = false;
-            } else if (password.validity.tooShort) {
-                password.setCustomValidity('Şifre en az 6 karakter olmalıdır');
-                isValid = false;
-            } else {
-                password.setCustomValidity('');
-            }
+            // Form gönderilmeden önce kontrol
+            form.addEventListener('submit', function(event) {
+                let isValid = true;
 
-            // Şifre tekrar kontrolü
-            if (confirmPassword.validity.valueMissing) {
-                confirmPassword.setCustomValidity('Şifre tekrarı gerekli');
-                isValid = false;
-            } else if (password.value !== confirmPassword.value) {
-                confirmPassword.setCustomValidity('Şifreler eşleşmiyor');
-                isValid = false;
-            } else {
-                confirmPassword.setCustomValidity('');
-            }
+                // E-posta kontrolü
+                if (!emailInput.value) {
+                    isValid = false;
+                } else if (!emailInput.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                    isValid = false;
+                }
 
-            if (!isValid) {
-                event.preventDefault();
-            }
-        });
+                // Şifre kontrolü
+                if (!passwordInput.value) {
+                    isValid = false;
+                } else if (passwordInput.value.length < 6) {
+                    isValid = false;
+                }
 
-        // E-posta doğrulama
-        email.addEventListener('input', function() {
-            if (email.validity.typeMismatch) {
-                email.setCustomValidity('Lütfen geçerli bir e-posta adresi girin');
-            } else if (email.validity.valueMissing) {
-                email.setCustomValidity('E-posta adresi gerekli');
-            } else {
-                email.setCustomValidity('');
-            }
-        });
+                // Şifre eşleşme kontrolü
+                if (!confirmPasswordInput.value) {
+                    isValid = false;
+                } else if (passwordInput.value !== confirmPasswordInput.value) {
+                    isValid = false;
+                }
 
-        // Şifre doğrulama
-        password.addEventListener('input', function() {
-            if (password.validity.valueMissing) {
-                password.setCustomValidity('Şifre gerekli');
-            } else if (password.validity.tooShort) {
-                password.setCustomValidity('Şifre en az 6 karakter olmalıdır');
-            } else {
-                password.setCustomValidity('');
-            }
-            checkPasswordMatch();
-        });
+                if (isValid) {
+                    return true;
+                }
+            });
 
-        // Şifre tekrar doğrulama
-        confirmPassword.addEventListener('input', function() {
-            if (confirmPassword.validity.valueMissing) {
-                confirmPassword.setCustomValidity('Şifre tekrarı gerekli');
-            } else {
-                checkPasswordMatch();
-            }
-        });
+            // Şifre görünürlük kontrolü
+            const togglePassword = document.getElementById('togglePassword');
+            const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
 
-        // Şifrelerin eşleşmesini kontrol et
-        function checkPasswordMatch() {
-            if (password.value !== confirmPassword.value) {
-                confirmPassword.setCustomValidity('Şifreler eşleşmiyor');
-            } else {
-                confirmPassword.setCustomValidity('');
-            }
-        }
+            togglePassword.addEventListener('mousedown', function() {
+                passwordInput.type = 'text';
+            });
 
-        // Şifre göster/gizle - İlk şifre alanı
-        togglePassword.addEventListener('mousedown', function() {
-            password.type = 'text';
-        });
+            togglePassword.addEventListener('mouseup', function() {
+                passwordInput.type = 'password';
+            });
 
-        togglePassword.addEventListener('mouseup', function() {
-            password.type = 'password';
-        });
+            toggleConfirmPassword.addEventListener('mousedown', function() {
+                confirmPasswordInput.type = 'text';
+            });
 
-        togglePassword.addEventListener('mouseleave', function() {
-            password.type = 'password';
-        });
+            toggleConfirmPassword.addEventListener('mouseup', function() {
+                confirmPasswordInput.type = 'password';
+            });
 
-        // Şifre göster/gizle - Şifre tekrar alanı
-        toggleConfirmPassword.addEventListener('mousedown', function() {
-            confirmPassword.type = 'text';
-        });
-
-        toggleConfirmPassword.addEventListener('mouseup', function() {
-            confirmPassword.type = 'password';
-        });
-
-        toggleConfirmPassword.addEventListener('mouseleave', function() {
-            confirmPassword.type = 'password';
+            // Sayfa dışına tıklandığında şifre gizleme
+            document.addEventListener('mouseup', function() {
+                passwordInput.type = 'password';
+                confirmPasswordInput.type = 'password';
+            });
         });
     </script>
 </body>
