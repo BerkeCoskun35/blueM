@@ -140,3 +140,8 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # Tablolar yoksa oluştur
     app.run(debug=True) 
+
+
+
+
+#Mobil için Login & Register sayfaları oluşturuldu ancak boyutu 500mb+ olduğu için github'a yükleyemedim. (Genel Android Studio boyutu)
