@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -136,10 +136,110 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+
+# API Ana sayfası
+@app.route('/api/')
+def api_index():
+    return jsonify({'message': 'API Ana Sayfasına Hoşgeldiniz!'}), 200
+
+# API Login Endpoint (POST)
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    if current_user.is_authenticated:
+        return jsonify({'message': 'Zaten giriş yapmış durumdasınız!'}), 200
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON verisi eksik!'}), 400
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email:
+        return jsonify({'error': 'E-posta adresi gerekli!'}), 400
+
+    if not password:
+        return jsonify({'error': 'Şifre gerekli!'}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if user and check_password_hash(user.password, password):
+        login_user(user)
+        return jsonify({'message': 'Başarıyla giriş yaptınız!'}), 200
+    else:
+        return jsonify({'error': 'E-posta veya şifre hatalı!'}), 401
+
+# API Register Endpoint (POST)
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    if current_user.is_authenticated:
+        return jsonify({'message': 'Zaten giriş yapmış durumdasınız!'}), 200
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON verisi eksik!'}), 400
+
+    email = data.get('email')
+    password = data.get('password')
+    confirm_password = data.get('confirmPassword')
+
+    if not email:
+        return jsonify({'error': 'E-posta adresi gerekli!'}), 400
+
+    if not password:
+        return jsonify({'error': 'Şifre gerekli!'}), 400
+
+    if not confirm_password:
+        return jsonify({'error': 'Şifre tekrarı gerekli!'}), 400
+
+    # E-posta formatı kontrolü
+    if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+        return jsonify({'error': 'Geçerli bir e-posta adresi girin!'}), 400
+
+    # E-posta kontrolü
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Bu e-posta adresi zaten kayıtlı!'}), 400
+
+    # Şifre kontrolü
+    if len(password) < 6:
+        return jsonify({'error': 'Şifre en az 6 karakter olmalıdır!'}), 400
+
+    if password != confirm_password:
+        return jsonify({'error': 'Şifreler eşleşmiyor!'}), 400
+
+    try:
+        # Yeni kullanıcı oluşturma
+        hashed_password = generate_password_hash(password)
+        new_user = User(email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({'message': 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.'}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Kayıt sırasında bir hata oluştu!'}), 500
+
+# API Profil Endpoint (GET, giriş yapılmış kullanıcı için)
+@app.route('/api/profile')
+@login_required
+def api_profile():
+    return jsonify({
+        'id': current_user.id,
+        'email': current_user.email
+    }), 200
+
+# API Logout Endpoint (GET)
+@app.route('/api/logout')
+@login_required
+def api_logout():
+    logout_user()
+    return jsonify({'message': 'Başarıyla çıkış yaptınız!'}), 200
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # Tablolar yoksa oluştur
-    app.run(debug=True) 
+    app.run(host="0.0.0.0") 
 
 
 
