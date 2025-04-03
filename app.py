@@ -245,3 +245,4 @@ if __name__ == '__main__':
 
 
 #Mobil için Login & Register sayfaları oluşturuldu ancak boyutu 500mb+ olduğu için github'a yükleyemedim. (Genel Android Studio boyutu)
+#Mobil için design'da değişiklikler yapıldı. 03.04.2025
