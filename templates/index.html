@@ -26,7 +26,7 @@
             </ul>
         </nav>
     </header>
-    
+
     <div id="sideMenu" class="side-menu">
         <ul>
             <li><a href="{{ url_for('index') }}">
@@ -39,18 +39,99 @@
             </a></li>
         </ul>
     </div>
-    
+
     <div class="content">
-        <!-- Sayfa içeriği buraya gelecek -->
+        <h1>Hoşgeldiniz</h1>
+        <div id="musicGrid" class="music-grid">
+            <!-- JavaScript ile müzik kartları buraya eklenecek -->
+        </div>
+    </div>
+
+    <div class="music-panel">
+        <audio id="audioPlayer">
+            <source src="/stream" type="audio/mp3">
+            Tarayıcınız audio elementini desteklemiyor.
+        </audio>
+        <div class="controls">
+            <button onclick="playAudio()">▶️</button>
+            <button onclick="pauseAudio()">⏸️</button>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5" onchange="setVolume(this.value)">
+            <img src="/static/images/volume-icon.png" alt="Ses" class="volume-icon">
+        </div>
     </div>
 
     <script>
-        document.getElementById('menuToggle').addEventListener('click', function() {
-            const sideMenu = document.getElementById('sideMenu');
-            const content = document.querySelector('.content');
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuToggle = document.getElementById('menuToggle');
+        const sideMenu = document.getElementById('sideMenu');
+        const content = document.querySelector('.content');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeIcon = document.querySelector('.volume-icon');
+        const musicGrid = document.getElementById('musicGrid');
+
+        let previousVolume = 0.5;
+        audioPlayer.volume = previousVolume;
+        volumeSlider.value = previousVolume;
+
+        menuToggle.addEventListener('click', function() {
             sideMenu.classList.toggle('active');
             content.classList.toggle('shifted');
         });
+
+        window.playAudio = function() {
+            audioPlayer.play();
+        };
+
+        window.pauseAudio = function() {
+            audioPlayer.pause();
+        };
+
+        window.setVolume = function(value) {
+            audioPlayer.volume = value;
+            if (audioPlayer.volume == 0) {
+                volumeIcon.src = "/static/images/nonvolume-icon.png";
+            } else {
+                volumeIcon.src = "/static/images/volume-icon.png";
+            }
+        };
+
+        function toggleMute() {
+            if (audioPlayer.volume > 0) {
+                previousVolume = audioPlayer.volume;
+                audioPlayer.volume = 0;
+                volumeSlider.value = 0;
+                volumeIcon.src = "/static/images/nonvolume-icon.png";
+            } else {
+                audioPlayer.volume = previousVolume;
+                volumeSlider.value = previousVolume;
+                volumeIcon.src = "/static/images/volume-icon.png";
+            }
+        }
+
+        volumeIcon.addEventListener('click', toggleMute);
+
+        // Dinamik müzik kartları oluşturma
+        for (let i = 1; i <= 50; i++) {
+            const card = document.createElement('div');
+            card.className = 'music-card';
+            card.style.backgroundImage = `url('/static/images/album${(i % 10) + 1}.png')`;
+
+            const info = document.createElement('div');
+            info.className = 'music-info';
+
+            const title = document.createElement('h3');
+            title.innerText = `Şarkı ${i}`;
+
+            const artist = document.createElement('p');
+            artist.innerText = `Sanatçı ${i}`;
+
+            info.appendChild(title);
+            info.appendChild(artist);
+            card.appendChild(info);
+            musicGrid.appendChild(card);
+        }
+    });
     </script>
 </body>
 </html>

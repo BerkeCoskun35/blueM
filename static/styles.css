@@ -5,7 +5,8 @@ body {
     text-align: center;
     margin: 0;
     height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: scroll;
 }
 
 .navbar {
@@ -482,4 +483,109 @@ input:invalid:not(:placeholder-shown)::after {
 .logout-button:hover {
     background-color: #c82333;
 }
+
+
+/*Müzik Oynatma*/
+
+.music-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px 0;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.music-panel .controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+
+.music-panel button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.music-panel button:hover {
+    color: #4a9eff;
+}
+
+.music-player {
+    margin-top: 50px;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+#volumeSlider {
+    width: 150px;
+}
+
+.volume-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.controls button {
+    padding: 10px 20px;
+    background-color: #4a9eff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.controls button:hover {
+    background-color: #357abd;
+}
+
+
+/*Müzik Kartları*/
+
+.music-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 50px;
+    padding: 20px;
+    margin-top: 100px;
+}
+
+.music-card {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* <-- İşte burası önemli */
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+
 
