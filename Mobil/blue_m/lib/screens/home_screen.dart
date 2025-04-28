@@ -1,5 +1,6 @@
 // home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,19 +10,48 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late AudioPlayer _audioPlayer;
+  late AudioCache _audioCache;
   double _volume = 0.5;
   bool _isPlaying = false;
 
-  void _togglePlayPause() {
+  @override
+  void initState() {
+    super.initState();
+    // 1) AudioPlayer nesnesini oluştur
+    _audioPlayer = AudioPlayer();
+    // 2) AudioCache ile assets klasöründen çalma desteği ekle
+    _audioCache = AudioCache(prefix: 'assets/');
+    // 3) İlk yüklemede ses seviyesini ayarla
+    _audioPlayer.setVolume(_volume);  
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlayPause() async {
+    if (_isPlaying) {
+      // Duraklat
+      await _audioPlayer.pause();
+    } else {
+      // Çal (ilk seferde yüklemek için play, sonraki seferler resume da olur)
+      await _audioPlayer.play(AssetSource('audio.mp3'));
+      await _audioPlayer.setVolume(_volume);
+    }
     setState(() {
       _isPlaying = !_isPlaying;
     });
   }
 
-  void _setVolume(double value) {
+  Future<void> _setVolume(double value) async {
     setState(() {
       _volume = value;
     });
+    // Gerçek ses seviyesini de uygula
+    await _audioPlayer.setVolume(_volume);
   }
 
   @override
@@ -91,11 +121,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Image.asset(
                             'assets/images/album${(index % 10) + 1}.png',
                             fit: BoxFit.cover,
-                             errorBuilder: (context, error, stackTrace) {
-  // Fallback rengini index'e göre belirle
-  final fallbackColor = Colors.primaries[index % Colors.primaries.length].shade800;
-  return Container(color: fallbackColor);
-},
+                            errorBuilder: (context, error, stackTrace) {
+                              final fallbackColor = Colors.primaries[index % Colors.primaries.length].shade800;
+                              return Container(color: fallbackColor);
+                            },
                           ),
                         ),
                         Align(
