@@ -11,46 +11,87 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late AudioPlayer _audioPlayer;
-  late AudioCache _audioCache;
   double _volume = 0.5;
   bool _isPlaying = false;
 
-  @override
+//  @override
+//void initState() {
+//  super.initState();
+//  // PlayerMode.lowLatency moduyla başlatıyoruz:
+//  _audioPlayer = AudioPlayer();
+//  _audioPlayer.setPlayerMode(PlayerMode.lowLatency);
+//  // Bir kez asset’i yükleyip hazır hale getir:
+//  _audioPlayer.setSource(AssetSource('audio.mp3'));
+//  // Playback sırasında kaynakları stop() sonrası bırakmasını istiyorsak:
+//  _audioPlayer.setReleaseMode(ReleaseMode.stop);  // default RELEASE zaten release eder :contentReference[oaicite:1]{index=1}
+//  // İlk ses seviyesini uygula:
+//  _audioPlayer.setVolume(_volume);
+//}
+
+@override
   void initState() {
     super.initState();
-    // 1) AudioPlayer nesnesini oluştur
-    _audioPlayer = AudioPlayer();
-    // 2) AudioCache ile assets klasöründen çalma desteği ekle
-    _audioCache = AudioCache(prefix: 'assets/');
-    // 3) İlk yüklemede ses seviyesini ayarla
-    _audioPlayer.setVolume(_volume);  
+    _audioPlayer = AudioPlayer()
+      // Uzun dosyalar için mediaPlayer modu tercih edin:
+      ..setPlayerMode(PlayerMode.mediaPlayer)
+      // Çalmayı durdurunca kaynak serbest kalsın:
+      ..setReleaseMode(ReleaseMode.stop);
   }
 
-  @override
+
+//  @override
+//void dispose() {
+//  // Eğer pause’dan sonra bile RAM’de tutulan bir buffer kaldıysa:
+//  _audioPlayer.release();
+//  _audioPlayer.dispose();
+//  super.dispose();
+//}
+
+
+@override
   void dispose() {
+    _audioPlayer.release();
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  Future<void> _togglePlayPause() async {
+
+//  Future<void> _togglePlayPause() async {
+//    if (_isPlaying) {
+//      // Duraklat
+//      await _audioPlayer.pause();
+//    } else {
+//      // Çal (ilk seferde yüklemek için play, sonraki seferler resume da olur)
+//      await _audioPlayer.resume();
+//    }
+//    setState(() => _isPlaying = !_isPlaying);
+//  }//
+
+//  Future<void> _setVolume(double value) async {
+//    setState(() {
+//      _volume = value;
+//    });
+//    // Gerçek ses seviyesini de uygula
+//    await _audioPlayer.setVolume(_volume);
+//  }
+
+
+Future<void> _togglePlayPause() async {
     if (_isPlaying) {
-      // Duraklat
-      await _audioPlayer.pause();
+      // Stop(), tamponu serbest bırakır:
+      await _audioPlayer.stop();
     } else {
-      // Çal (ilk seferde yüklemek için play, sonraki seferler resume da olur)
-      await _audioPlayer.play(AssetSource('audio.mp3'));
-      await _audioPlayer.setVolume(_volume);
+      // play() ile asset’i akıtma şeklinde çal:
+      await _audioPlayer.play(
+        AssetSource('audio.mp3'),
+        volume: _volume,
+      );
     }
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
+    setState(() => _isPlaying = !_isPlaying);
   }
 
   Future<void> _setVolume(double value) async {
-    setState(() {
-      _volume = value;
-    });
-    // Gerçek ses seviyesini de uygula
+    setState(() => _volume = value);
     await _audioPlayer.setVolume(_volume);
   }
 
