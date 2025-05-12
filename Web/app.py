@@ -4,6 +4,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
 import re
+import random
+import ytmusicapi
+from ytmusicapi import YTMusic
+import json
+import requests
+import vlc
+import yt_dlp
+import threading
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
@@ -16,11 +24,80 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# YouTube Music API kimlik doğrulama
+try:
+    ytmusic = YTMusic('oauth.json')
+    print("YouTube Music API bağlantısı başarılı!")
+except Exception as e:
+    print(f"YouTube Music API bağlantı hatası: {str(e)}")
+    print("Lütfen önce setup_oauth.py dosyasını çalıştırın.")
+    ytmusic = None
+
+# VLC instance oluştur
+instance = vlc.Instance()
+player = instance.media_player_new()
+player.audio_set_volume(50)  # Başlangıç ses seviyesini %50 olarak ayarla
+
+# Aktif çalan şarkıyı takip etmek için
+current_song = None
+current_media = None
+player_thread = None
+
+def play_song_in_background(video_id):
+    global current_song, player_thread, current_media
+    
+    try:
+        # Eğer bir şarkı çalıyorsa durdur
+        if player.is_playing():
+            player.stop()
+        
+        # Yeni şarkıyı yükle
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        # yt-dlp yapılandırması
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'quiet': True,
+            'no_warnings': True
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            audio_url = info['url']
+        
+        # VLC media oluştur ve sakla
+        current_media = instance.media_new(audio_url)
+        player.set_media(current_media)
+        
+        # Şarkıyı çal
+        player.play()
+        
+        # Şarkı bitene kadar bekle
+        while player.is_playing():
+            pass
+            
+    except Exception as e:
+        print(f"Şarkı çalma hatası: {str(e)}")
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
+
+class Song(db.Model):
+    __tablename__ = 'songs'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    artist = db.Column(db.String(255), nullable=False)
+    video_id = db.Column(db.String(255), nullable=False)
+    duration = db.Column(db.String(50))
+    thumbnail_url = db.Column(db.String(255))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -28,7 +105,9 @@ def load_user(user_id):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Rastgele 12 şarkı seç
+    songs = Song.query.order_by(db.func.random()).limit(12).all()
+    return render_template('index.html', songs=songs)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -261,6 +340,139 @@ def stream_audio():
     rv.headers.add('Accept-Ranges', 'bytes')
     rv.headers.add('Content-Length', str(length))
     return rv
+
+@app.route('/api/songs/update', methods=['POST'])
+@login_required
+def update_songs():
+    if not ytmusic:
+        return jsonify({'error': 'YouTube Music API bağlantısı kurulamadı!'}), 500
+    
+    try:
+        # YouTube Music'ten şarkıları çek
+        search_results = ytmusic.search('müzik', filter='songs', limit=100)
+        
+        if not search_results:
+            return jsonify({'error': 'Şarkılar alınamadı!'}), 404
+        
+        # Mevcut şarkıları temizle
+        Song.query.delete()
+        
+        # Yeni şarkıları ekle
+        for song in search_results:
+            try:
+                new_song = Song(
+                    title=song['title'],
+                    artist=song['artists'][0]['name'],
+                    video_id=song['videoId'],
+                    duration=song.get('duration', ''),
+                    thumbnail_url=song.get('thumbnails', [{}])[0].get('url', '')
+                )
+                db.session.add(new_song)
+            except Exception as e:
+                print(f"Şarkı ekleme hatası: {str(e)}")
+                continue
+        
+        db.session.commit()
+        return jsonify({'message': 'Şarkılar başarıyla güncellendi!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Şarkı güncelleme hatası: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/play/<video_id>')
+def play_song(video_id):
+    global current_song, player_thread, current_media
+    
+    try:
+        if not ytmusic:
+            return jsonify({'error': 'YouTube Music API bağlantısı kurulamadı!'}), 500
+            
+        # Şarkı bilgilerini al
+        song = Song.query.filter_by(video_id=video_id).first()
+        if not song:
+            return jsonify({'error': 'Şarkı bulunamadı!'}), 404
+        
+        # Eğer aynı şarkı zaten çalıyorsa, durdur
+        if current_song == video_id and player.is_playing():
+            player.stop()
+            current_song = None
+            current_media = None
+            return jsonify({'message': 'Şarkı durduruldu'})
+        
+        # Yeni şarkıyı çalmaya başla
+        current_song = video_id
+        player_thread = threading.Thread(target=play_song_in_background, args=(video_id,))
+        player_thread.daemon = True
+        player_thread.start()
+        
+        return jsonify({
+            'message': 'Şarkı çalınıyor',
+            'title': song.title,
+            'artist': song.artist
+        })
+        
+    except Exception as e:
+        print(f"Şarkı çalma hatası: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/pause')
+def pause_song():
+    global current_song, current_media
+    
+    try:
+        if player.is_playing():
+            player.pause()
+            return jsonify({'message': 'Şarkı duraklatıldı'})
+        return jsonify({'message': 'Çalan şarkı yok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/resume')
+def resume_song():
+    global current_song, current_media
+    
+    try:
+        if not player.is_playing() and current_song and current_media:
+            player.play()
+            return jsonify({'message': 'Şarkı devam ediyor'})
+        return jsonify({'message': 'Duraklatılmış şarkı yok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/stop')
+def stop_song():
+    global current_song, current_media
+    
+    try:
+        if player.is_playing() or current_song:
+            player.stop()
+            current_song = None
+            current_media = None
+            return jsonify({'message': 'Şarkı durduruldu'})
+        return jsonify({'message': 'Çalan şarkı yok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/volume/<int:volume>')
+def set_volume(volume):
+    try:
+        # VLC ses seviyesi 0-100 arasında
+        volume = max(0, min(100, volume))
+        player.audio_set_volume(volume)
+        return jsonify({'message': f'Ses seviyesi {volume} olarak ayarlandı'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/status')
+def get_status():
+    try:
+        return jsonify({
+            'is_playing': player.is_playing(),
+            'volume': player.audio_get_volume(),
+            'current_song': current_song
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

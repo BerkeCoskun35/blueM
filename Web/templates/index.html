@@ -43,20 +43,27 @@
     <div class="content">
         <h1>Hoşgeldiniz</h1>
         <div id="musicGrid" class="music-grid">
-            <!-- JavaScript ile müzik kartları buraya eklenecek -->
+            {% for song in songs %}
+            <div class="music-card" data-video-id="{{ song.video_id }}" onclick="playSong('{{ song.video_id }}')">
+                <img src="{{ song.thumbnail_url }}" alt="{{ song.title }}" class="album-cover">
+                <div class="music-info">
+                    <h3>{{ song.title }}</h3>
+                    <p>{{ song.artist }}</p>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
     <div class="music-panel">
-        <audio id="audioPlayer">
-            <source src="/stream" type="audio/mp3">
-            Tarayıcınız audio elementini desteklemiyor.
-        </audio>
+        <div id="nowPlaying" style="display: none;"></div>
         <div class="controls">
-            <button onclick="playAudio()">▶️</button>
-            <button onclick="pauseAudio()">⏸️</button>
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5" onchange="setVolume(this.value)">
-            <img src="/static/images/volume-icon.png" alt="Ses" class="volume-icon">
+            <button id="playPauseBtn" onclick="togglePlayPause()">⏸️</button>
+            <button onclick="stopSong()">⏹️</button>
+            <div class="volume-control">
+                <img src="/static/images/volume-icon.png" alt="Ses" class="volume-icon" onclick="toggleMute()">
+                <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
+            </div>
         </div>
     </div>
 
@@ -68,7 +75,6 @@
         const audioPlayer = document.getElementById('audioPlayer');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeIcon = document.querySelector('.volume-icon');
-        const musicGrid = document.getElementById('musicGrid');
 
         let previousVolume = 0.5;
         audioPlayer.volume = previousVolume;
@@ -110,28 +116,147 @@
         }
 
         volumeIcon.addEventListener('click', toggleMute);
-
-        // Dinamik müzik kartları oluşturma
-        for (let i = 1; i <= 50; i++) {
-            const card = document.createElement('div');
-            card.className = 'music-card';
-            card.style.backgroundImage = `url('/static/images/album${(i % 10) + 1}.png')`;
-
-            const info = document.createElement('div');
-            info.className = 'music-info';
-
-            const title = document.createElement('h3');
-            title.innerText = `Şarkı ${i}`;
-
-            const artist = document.createElement('p');
-            artist.innerText = `Sanatçı ${i}`;
-
-            info.appendChild(title);
-            info.appendChild(artist);
-            card.appendChild(info);
-            musicGrid.appendChild(card);
-        }
     });
+
+    let currentSong = null;
+    let isPlaying = false;
+
+    // Sayfa yüklendiğinde ses seviyesini ayarla
+    document.addEventListener('DOMContentLoaded', function() {
+        const volumeSlider = document.getElementById('volumeSlider');
+        volumeSlider.value = 50;
+        setVolume(50);
+    });
+
+    async function togglePlayPause() {
+        try {
+            if (!currentSong) return;
+            
+            if (isPlaying) {
+                const response = await fetch('/api/songs/pause');
+                if (response.ok) {
+                    isPlaying = false;
+                    document.getElementById('playPauseBtn').textContent = '▶️';
+                }
+            } else {
+                const response = await fetch('/api/songs/resume');
+                if (response.ok) {
+                    isPlaying = true;
+                    document.getElementById('playPauseBtn').textContent = '⏸️';
+                }
+            }
+        } catch (error) {
+            console.error('Şarkı kontrolü hatası:', error);
+        }
+    }
+
+    async function setVolume(value) {
+        try {
+            const response = await fetch(`/api/songs/volume/${value}`);
+            if (response.ok) {
+                const volumeIcon = document.querySelector('.volume-icon');
+                if (value == 0) {
+                    volumeIcon.src = "/static/images/nonvolume-icon.png";
+                } else {
+                    volumeIcon.src = "/static/images/volume-icon.png";
+                }
+            }
+        } catch (error) {
+            console.error('Ses ayarlama hatası:', error);
+        }
+    }
+
+    async function toggleMute() {
+        const volumeSlider = document.getElementById('volumeSlider');
+        if (volumeSlider.value > 0) {
+            volumeSlider.value = 0;
+            setVolume(0);
+        } else {
+            volumeSlider.value = 50;
+            setVolume(50);
+        }
+    }
+
+    async function playSong(videoId) {
+        try {
+            const response = await fetch(`/api/songs/play/${videoId}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (currentSong === videoId) {
+                    await stopSong();
+                    currentSong = null;
+                    isPlaying = false;
+                } else {
+                    currentSong = videoId;
+                    isPlaying = true;
+                    showNowPlaying(data.title, data.artist);
+                    document.getElementById('playPauseBtn').textContent = '⏸️';
+                }
+            } else {
+                alert(data.error || 'Şarkı çalınamadı!');
+            }
+        } catch (error) {
+            console.error('Şarkı çalma hatası:', error);
+            alert('Şarkı çalınamadı!');
+        }
+    }
+
+    async function stopSong() {
+        try {
+            const response = await fetch('/api/songs/stop');
+            const data = await response.json();
+            
+            if (response.ok) {
+                hideNowPlaying();
+                isPlaying = false;
+                currentSong = null;
+                document.getElementById('playPauseBtn').textContent = '▶️';
+            } else {
+                alert(data.error || 'Şarkı durdurulamadı!');
+            }
+        } catch (error) {
+            console.error('Şarkı durdurma hatası:', error);
+            alert('Şarkı durdurulamadı!');
+        }
+    }
+
+    function showNowPlaying(title, artist) {
+        const nowPlaying = document.getElementById('nowPlaying');
+        if (nowPlaying) {
+            nowPlaying.innerHTML = `
+                <div class="now-playing">
+                    <h3>Şu an çalıyor:</h3>
+                    <p>${title} - ${artist}</p>
+                </div>
+            `;
+            nowPlaying.style.display = 'block';
+        }
+    }
+
+    function hideNowPlaying() {
+        const nowPlaying = document.getElementById('nowPlaying');
+        if (nowPlaying) {
+            nowPlaying.style.display = 'none';
+        }
+    }
+
+    // Periyodik olarak şarkı durumunu kontrol et
+    setInterval(async () => {
+        if (currentSong) {
+            try {
+                const response = await fetch('/api/songs/status');
+                const data = await response.json();
+                if (response.ok) {
+                    isPlaying = data.is_playing;
+                    document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️' : '▶️';
+                    document.getElementById('volumeSlider').value = data.volume;
+                }
+            } catch (error) {
+                console.error('Durum kontrolü hatası:', error);
+            }
+        }
+    }, 1000);
     </script>
 </body>
 </html>
