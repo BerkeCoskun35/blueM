@@ -1,0 +1,2 @@
+C:/Users/Berke/Documents/GitHub/blueM/Mobil/blue_m/android/app/.cxx/Debug/2q633y72/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/Berke/Documents/GitHub/blueM/Mobil/blue_m/android/app/.cxx/Debug/2q633y72/x86_64/CMakeFiles/rebuild_cache.dir

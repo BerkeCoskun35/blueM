@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, session, Response, stream_with_context
+from flask import Flask, abort, jsonify, render_template, request, redirect, url_for, flash, session, Response, stream_with_context
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -341,8 +341,24 @@ def stream_audio():
     rv.headers.add('Content-Length', str(length))
     return rv
 
-@app.route('/api/songs/update', methods=['POST'])
-@login_required
+@app.route('/api/songs')
+def api_songs():
+    # 5. Veritabanından rastgele 12 şarkı seç ve JSON olarak döndür
+    songs = Song.query.order_by(db.func.random()).limit(12).all()
+    data = []
+    for s in songs:
+        data.append({
+            'id':            s.id,
+            'title':         s.title,
+            'artist':        s.artist,
+            'duration':      s.duration,
+            'video_id':      s.video_id,
+            'thumbnail_url': s.thumbnail_url
+        })
+
+    return jsonify(data), 200
+
+@app.route('/api/songs/update')
 def update_songs():
     if not ytmusic:
         return jsonify({'error': 'YouTube Music API bağlantısı kurulamadı!'}), 500

@@ -12,6 +12,7 @@ dependencies:
   http: ^0.13.6
   cupertino_icons: ^1.0.8
   audioplayers: ^6.4.0
+  youtube_player_flutter: ^9.1.1
 
 dev_dependencies:
   flutter_test:
