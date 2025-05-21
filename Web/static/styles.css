@@ -88,14 +88,16 @@ body {
 }
 
 .content {
-    margin-top: 20px;
+    margin-top: 70px;
     padding: 20px;
     transition: margin-left 0.3s ease;
     margin-left: 50px;
+    width: calc(100% - 50px);
 }
 
 .content.shifted {
     margin-left: 250px;
+    width: calc(100% - 250px);
 }
 
 .nav-button {
@@ -118,7 +120,7 @@ body {
 /* Yan Menü Stilleri */
 .side-menu {
     position: fixed;
-    left: -200px;
+    left: -250px;
     top: 70px;
     width: 250px;
     height: calc(100vh - 70px);
@@ -126,6 +128,11 @@ body {
     transition: left 0.3s ease;
     z-index: 1000;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+}
+
+.side-menu.active {
+    left: 0;
 }
 
 .side-menu ul {
@@ -176,10 +183,6 @@ body {
 }
 
 /* Menü açıkken normal görünüm */
-.side-menu.active {
-    left: 0;
-}
-
 .side-menu.active a {
     justify-content: flex-start;
     padding: 15px;
@@ -492,32 +495,72 @@ input:invalid:not(:placeholder-shown)::after {
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #222;
+    background: #181818;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 16px 16px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.7);
+    z-index: 1000;
+    color: #fff;
+    font-family: "Segoe UI", Arial, sans-serif;
+    flex-wrap: wrap;
+}
+
+.now-playing-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    flex: 1;
+}
+
+.now-playing-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 350px;
+}
+
+.now-playing-time {
+    font-size: 0.95em;
+    color: #bbb;
+    margin-top: 2px;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.music-panel.visible {
+    display: flex;
+}
+
+.music-panel button {
+    background: #232323;
+    border: none;
+    color: #fff;
+    font-size: 1.7em;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
-    padding: 10px 0;
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-}
-
-.music-panel .controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-
-.music-panel button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 20px;
+    transition: background 0.2s, color 0.2s;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .music-panel button:hover {
+    background: #333;
     color: #4a9eff;
 }
 
@@ -525,28 +568,27 @@ input:invalid:not(:placeholder-shown)::after {
     margin-top: 50px;
 }
 
-.controls {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 15px;
-}
-
 .volume-control {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin-top: 20px;
-    gap: 10px;
+    gap: 6px;
+    background: #232323;
+    border-radius: 20px;
+    padding: 2px 6px;
+    min-width: 0;
 }
 
 #volumeSlider {
-    width: 150px;
+    width: 80px;
+    accent-color: #4a9eff;
+    min-width: 40px;
+    max-width: 100px;
 }
 
 .volume-icon {
     width: 24px;
     height: 24px;
+    cursor: pointer;
 }
 
 .controls button {
@@ -575,12 +617,13 @@ input:invalid:not(:placeholder-shown)::after {
 }
 
 .music-card {
-    background: #fff;
+    background: #111;
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     transition: transform 0.3s ease;
     cursor: pointer;
+    color: #fff;
 }
 
 .music-card:hover {
@@ -595,21 +638,47 @@ input:invalid:not(:placeholder-shown)::after {
 
 .music-info {
     padding: 15px;
+    background: #111;
 }
 
 .music-info h3 {
     margin: 0;
     font-size: 1.1em;
-    color: #333;
+    color: #fff;
+    background: #111;
+    border-radius: 6px 6px 0 0;
+    padding: 8px 12px;
+    font-weight: bold;
+    transition: background 0.3s;
+    cursor: pointer;
+    position: relative;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.music-info h3.scrolling {
+    animation: scroll-text 4s ease-in-out infinite;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+@keyframes scroll-text {
+    0% {
+        transform: translateX(0%);
+    }
+    50% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
+}
+
 .music-info p {
     margin: 5px 0 0;
     font-size: 0.9em;
-    color: #666;
+    color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

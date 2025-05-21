@@ -9,10 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^0.13.6
+  http: ^1.4.0
   cupertino_icons: ^1.0.8
-  audioplayers: ^6.4.0
-  youtube_player_flutter: ^9.1.1
+  youtube_explode_dart: ^2.4.0
+  just_audio: ^0.10.3
 
 dev_dependencies:
   flutter_test:

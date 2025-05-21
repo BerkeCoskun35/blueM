@@ -41,28 +41,28 @@
     </div>
 
     <div class="content">
-        <h1>Hoşgeldiniz</h1>
         <div id="musicGrid" class="music-grid">
-            {% for song in songs %}
-            <div class="music-card" data-video-id="{{ song.video_id }}" onclick="playSong('{{ song.video_id }}')">
-                <img src="{{ song.thumbnail_url }}" alt="{{ song.title }}" class="album-cover">
-                <div class="music-info">
-                    <h3>{{ song.title }}</h3>
-                    <p>{{ song.artist }}</p>
-                </div>
-            </div>
-            {% endfor %}
+            <!-- Şarkılar JavaScript ile yüklenecek -->
         </div>
     </div>
 
-    <div class="music-panel">
-        <div id="nowPlaying" style="display: none;"></div>
+    <div class="music-panel" style="display:none;">
+        <div class="now-playing-info">
+            <div class="now-playing-title" id="nowPlayingTitle">Şarkı Seçiniz</div>
+            <div class="now-playing-time">
+                <span id="currentTime">00:00</span> / <span id="totalTime">00:00</span>
+            </div>
+        </div>
         <div class="controls">
-            <button id="playPauseBtn" onclick="togglePlayPause()">⏸️</button>
-            <button onclick="stopSong()">⏹️</button>
+            <button id="playPauseBtn" onclick="togglePlayPause()">
+                <span id="playPauseIcon">⏸️</span>
+            </button>
+            <button onclick="stopSong()">
+                <span>⏹️</span>
+            </button>
             <div class="volume-control">
-                <img src="/static/images/volume-icon.png" alt="Ses" class="volume-icon" onclick="toggleMute()">
-                <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
+                <img src="/static/images/volume-icon.png" alt="Ses" class="volume-icon" id="volumeIcon">
+                <input type="range" id="volumeSlider" min="0" max="100" value="50">
             </div>
         </div>
     </div>
@@ -72,81 +72,186 @@
         const menuToggle = document.getElementById('menuToggle');
         const sideMenu = document.getElementById('sideMenu');
         const content = document.querySelector('.content');
-        const audioPlayer = document.getElementById('audioPlayer');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeIcon = document.querySelector('.volume-icon');
 
-        let previousVolume = 0.5;
-        audioPlayer.volume = previousVolume;
-        volumeSlider.value = previousVolume;
-
-        menuToggle.addEventListener('click', function() {
-            sideMenu.classList.toggle('active');
-            content.classList.toggle('shifted');
-        });
-
-        window.playAudio = function() {
-            audioPlayer.play();
-        };
-
-        window.pauseAudio = function() {
-            audioPlayer.pause();
-        };
-
-        window.setVolume = function(value) {
-            audioPlayer.volume = value;
-            if (audioPlayer.volume == 0) {
-                volumeIcon.src = "/static/images/nonvolume-icon.png";
-            } else {
-                volumeIcon.src = "/static/images/volume-icon.png";
-            }
-        };
-
-        function toggleMute() {
-            if (audioPlayer.volume > 0) {
-                previousVolume = audioPlayer.volume;
-                audioPlayer.volume = 0;
-                volumeSlider.value = 0;
-                volumeIcon.src = "/static/images/nonvolume-icon.png";
-            } else {
-                audioPlayer.volume = previousVolume;
-                volumeSlider.value = previousVolume;
-                volumeIcon.src = "/static/images/volume-icon.png";
-            }
+        // Menü durumunu localStorage'da sakla
+        const isMenuOpen = localStorage.getItem('menuOpen') === 'true';
+        if (isMenuOpen) {
+            sideMenu.classList.add('active');
+            content.classList.add('shifted');
         }
 
-        volumeIcon.addEventListener('click', toggleMute);
+        menuToggle.addEventListener('click', function(event) {
+            event.stopPropagation();
+            sideMenu.classList.toggle('active');
+            content.classList.toggle('shifted');
+            localStorage.setItem('menuOpen', sideMenu.classList.contains('active'));
+        });
+
+        // Sayfa dışına tıklandığında menüyü kapat
+        document.addEventListener('click', function(event) {
+            if (!sideMenu.contains(event.target) && !menuToggle.contains(event.target) && sideMenu.classList.contains('active')) {
+                sideMenu.classList.remove('active');
+                content.classList.remove('shifted');
+                localStorage.setItem('menuOpen', 'false');
+            }
+        });
+
+        // Playlist'i yükle
+        loadPlaylist();
     });
 
     let currentSong = null;
     let isPlaying = false;
+    let previousVolume = 50;
+    let currentPosition = 0;
+    let totalDuration = 0;
+    let currentPlaylist = [];
 
-    // Sayfa yüklendiğinde ses seviyesini ayarla
-    document.addEventListener('DOMContentLoaded', function() {
-        const volumeSlider = document.getElementById('volumeSlider');
-        volumeSlider.value = 50;
-        setVolume(50);
+    async function loadPlaylist(playlistId) {
+        try {
+            console.log('Playlist yükleniyor...');
+            const response = await fetch(`/api/playlist`);
+            console.log('API yanıtı alındı:', response.status);
+            const songs = await response.json();
+            console.log('Şarkılar alındı:', songs);
+            
+            if (response.ok) {
+                currentPlaylist = songs;
+                displaySongs(songs);
+                console.log('Şarkılar gösterildi');
+            } else {
+                console.error('Playlist yüklenemedi:', songs.error);
+            }
+        } catch (error) {
+            console.error('Playlist yükleme hatası:', error);
+        }
+    }
+
+    function displaySongs(songs) {
+        console.log('Şarkılar gösteriliyor:', songs.length);
+        const musicGrid = document.getElementById('musicGrid');
+        musicGrid.innerHTML = '';
+        
+        songs.forEach(song => {
+            console.log('Şarkı kartı oluşturuluyor:', song.title);
+            const songCard = document.createElement('div');
+            songCard.className = 'music-card';
+            songCard.setAttribute('data-video-id', song.id);
+            songCard.onclick = () => playSong(song.id);
+            
+            songCard.innerHTML = `
+    <img src="https://img.youtube.com/vi/${song.id}/hqdefault.jpg" alt="${song.title}" class="album-cover">
+    <div class="music-info">
+        <h3 title="${song.title}">${song.title}</h3>
+        <p>${song.artist}</p>
+    </div>
+`;
+            
+            musicGrid.appendChild(songCard);
+        });
+
+        setTimeout(() => {
+    document.querySelectorAll('.music-info h3').forEach(h3 => {
+        h3.addEventListener('mouseenter', function() {
+            // Eğer metin sığmıyorsa scroll efekti ekle
+            if (h3.scrollWidth > h3.clientWidth) {
+                h3.classList.add('scrolling');
+            }
+        });
+        h3.addEventListener('mouseleave', function() {
+            h3.classList.remove('scrolling');
+        });
     });
+}, 100);
+
+        console.log('Tüm şarkı kartları oluşturuldu');
+    }
+
+    // Periyodik olarak şarkı durumunu kontrol et
+    setInterval(async () => {
+        if (currentSong) {
+            try {
+                const response = await fetch('/api/songs/status');
+                const data = await response.json();
+                if (response.ok) {
+                    isPlaying = data.is_playing;
+                    document.getElementById('playPauseIcon').textContent = isPlaying ? '⏸️' : '▶️';
+                    document.getElementById('volumeSlider').value = data.volume;
+                    
+                    currentPosition = data.position;
+                    totalDuration = data.duration;
+                }
+            } catch (error) {
+                console.error('Durum kontrolü hatası:', error);
+            }
+        }
+    }, 1000);
+
+    async function playSong(videoId) {
+        try {
+            const response = await fetch(`/api/play/${videoId}`);
+            const data = await response.json();
+            if (response.ok) {
+                if (currentSong === videoId) {
+                    await stopSong();
+                    currentSong = null;
+                    isPlaying = false;
+                } else {
+                    currentSong = videoId;
+                    isPlaying = true;
+                    showNowPlaying(data.title, data.artist);
+                    document.getElementById('playPauseIcon').textContent = '⏸️';
+                }
+            } else {
+                alert(data.error || 'Şarkı çalınamadı!');
+            }
+        } catch (error) {
+            console.error('Şarkı çalma hatası:', error);
+            alert('Şarkı çalınamadı!');
+        }
+    }
 
     async function togglePlayPause() {
         try {
             if (!currentSong) return;
-            
+            const icon = document.getElementById('playPauseIcon');
             if (isPlaying) {
                 const response = await fetch('/api/songs/pause');
                 if (response.ok) {
                     isPlaying = false;
-                    document.getElementById('playPauseBtn').textContent = '▶️';
+                    icon.textContent = '▶️';
                 }
             } else {
                 const response = await fetch('/api/songs/resume');
                 if (response.ok) {
                     isPlaying = true;
-                    document.getElementById('playPauseBtn').textContent = '⏸️';
+                    icon.textContent = '⏸️';
                 }
             }
         } catch (error) {
             console.error('Şarkı kontrolü hatası:', error);
+        }
+    }
+
+    async function stopSong() {
+        try {
+            const response = await fetch('/api/songs/stop');
+            const data = await response.json();
+            if (response.ok) {
+                hideNowPlaying();
+                isPlaying = false;
+                currentSong = null;
+                document.getElementById('playPauseIcon').textContent = '▶️';
+                currentPosition = 0;
+                totalDuration = 0;
+            } else {
+                alert(data.error || 'Şarkı durdurulamadı!');
+            }
+        } catch (error) {
+            console.error('Şarkı durdurma hatası:', error);
+            alert('Şarkı durdurulamadı!');
         }
     }
 
@@ -177,52 +282,9 @@
         }
     }
 
-    async function playSong(videoId) {
-        try {
-            const response = await fetch(`/api/songs/play/${videoId}`);
-            const data = await response.json();
-            
-            if (response.ok) {
-                if (currentSong === videoId) {
-                    await stopSong();
-                    currentSong = null;
-                    isPlaying = false;
-                } else {
-                    currentSong = videoId;
-                    isPlaying = true;
-                    showNowPlaying(data.title, data.artist);
-                    document.getElementById('playPauseBtn').textContent = '⏸️';
-                }
-            } else {
-                alert(data.error || 'Şarkı çalınamadı!');
-            }
-        } catch (error) {
-            console.error('Şarkı çalma hatası:', error);
-            alert('Şarkı çalınamadı!');
-        }
-    }
-
-    async function stopSong() {
-        try {
-            const response = await fetch('/api/songs/stop');
-            const data = await response.json();
-            
-            if (response.ok) {
-                hideNowPlaying();
-                isPlaying = false;
-                currentSong = null;
-                document.getElementById('playPauseBtn').textContent = '▶️';
-            } else {
-                alert(data.error || 'Şarkı durdurulamadı!');
-            }
-        } catch (error) {
-            console.error('Şarkı durdurma hatası:', error);
-            alert('Şarkı durdurulamadı!');
-        }
-    }
-
     function showNowPlaying(title, artist) {
         const nowPlaying = document.getElementById('nowPlaying');
+        const musicPanel = document.querySelector('.music-panel');
         if (nowPlaying) {
             nowPlaying.innerHTML = `
                 <div class="now-playing">
@@ -231,32 +293,19 @@
                 </div>
             `;
             nowPlaying.style.display = 'block';
+            musicPanel.classList.add('visible');
         }
     }
 
     function hideNowPlaying() {
         const nowPlaying = document.getElementById('nowPlaying');
+        const musicPanel = document.querySelector('.music-panel');
         if (nowPlaying) {
             nowPlaying.style.display = 'none';
+            musicPanel.classList.remove('visible');
         }
     }
-
-    // Periyodik olarak şarkı durumunu kontrol et
-    setInterval(async () => {
-        if (currentSong) {
-            try {
-                const response = await fetch('/api/songs/status');
-                const data = await response.json();
-                if (response.ok) {
-                    isPlaying = data.is_playing;
-                    document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️' : '▶️';
-                    document.getElementById('volumeSlider').value = data.volume;
-                }
-            } catch (error) {
-                console.error('Durum kontrolü hatası:', error);
-            }
-        }
-    }, 1000);
     </script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
