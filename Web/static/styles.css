@@ -93,6 +93,19 @@ body {
     transition: margin-left 0.3s ease;
     margin-left: 50px;
     width: calc(100% - 50px);
+    min-height: unset;
+    display: block;
+    justify-content: unset;
+    align-items: unset;
+    flex-direction: unset;
+}
+
+.auth-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin-top: 0;
 }
 
 .content.shifted {
@@ -246,22 +259,23 @@ body {
 }
 
 .login-container {
+    width: 100%;
+    max-width: 430px;
+    margin: 40px 0 40px 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    padding: 20px;
     box-sizing: border-box;
 }
 
 .login-form {
     background-color: #222;
-    padding: 25px;
-    border-radius: 10px;
+    padding: 32px 28px 28px 28px;
+    border-radius: 12px;
     width: 100%;
     max-width: 400px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.32);
 }
 
 .form-group {
@@ -614,6 +628,8 @@ input:invalid:not(:placeholder-shown)::after {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 20px;
     padding: 20px;
+    max-width: 1650px;
+    margin: 0 auto;
 }
 
 .music-card {

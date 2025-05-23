@@ -12,6 +12,12 @@
             <ul>
                 <li><button id="menuToggle" class="nav-button"><img src="{{ url_for('static', filename='images/buttonMenu.png') }}" alt="Menü" class="menu-icon"></button></li>
                 <li><a href="{{ url_for('index') }}" class="logo-button"><img src="{{ url_for('static', filename='images/buttonLogo.png') }}" alt="Logo" class="logo-icon"></a></li>
+                <!-- ARAMA KUTUSU NAVBAR İÇİNDE LOGONUN SAĞINDA -->
+                <li style="flex:1;display:flex;align-items:center;max-width:340px;margin-left:66px;">
+                    <form id="searchForm" style="width:100%;">
+                        <input type="text" id="searchBox" placeholder="Müzik ara..." style="width:100%;height:36px;padding:0 14px;font-size:15px;border-radius:8px;border:2px solid #444;background:#232323;color:#fff;outline:none;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+                    </form>
+                </li>
                 <li class="user-button-container">
                     {% if current_user.is_authenticated %}
                     <a href="{{ url_for('profile') }}" class="user-button">
@@ -44,25 +50,19 @@
         <div id="musicGrid" class="music-grid">
             <!-- Şarkılar JavaScript ile yüklenecek -->
         </div>
-    </div>
-
-    <div class="music-panel" style="display:none;">
-        <div class="now-playing-info">
-            <div class="now-playing-title" id="nowPlayingTitle">Şarkı Seçiniz</div>
-            <div class="now-playing-time">
-                <span id="currentTime">00:00</span> / <span id="totalTime">00:00</span>
+        <div id="bottomPlayer" style="position:fixed;left:0;right:0;bottom:0;width:100vw;background:#181818;box-shadow:0 -2px 10px rgba(0,0,0,0.7);color:#fff;display:none;align-items:center;justify-content:space-between;z-index:2000;padding:12px 32px;gap:32px;min-height:64px;">
+            <div style="min-width:200px;max-width:320px;overflow:hidden;">
+                <div id="playerSongTitle" style="font-weight:bold;font-size:1.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Şarkı Adı</div>
+                <div id="playerSongArtist" style="font-size:0.95em;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sanatçı</div>
             </div>
-        </div>
-        <div class="controls">
-            <button id="playPauseBtn" onclick="togglePlayPause()">
-                <span id="playPauseIcon">⏸️</span>
-            </button>
-            <button onclick="stopSong()">
-                <span>⏹️</span>
-            </button>
-            <div class="volume-control">
-                <img src="/static/images/volume-icon.png" alt="Ses" class="volume-icon" id="volumeIcon">
-                <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            <div style="flex:1;display:flex;align-items:center;gap:12px;max-width:700px;">
+                <span id="playerCurrentTime" style="width:48px;text-align:right;">00:00</span>
+                <input type="range" id="playerSeekBar" min="0" max="100" value="0" style="flex:1;accent-color:#4a9eff;">
+                <span id="playerTotalTime" style="width:48px;text-align:left;">00:00</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;min-width:120px;margin-right:150px;">
+                <img id="playerVolumeIcon" src="/static/images/volume-icon.png" alt="Ses" style="width:24px;height:24px;">
+                <input type="range" id="playerVolumeBar" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff;">
             </div>
         </div>
     </div>
@@ -108,6 +108,7 @@
     let currentPosition = 0;
     let totalDuration = 0;
     let currentPlaylist = [];
+    let allSongs = [];
 
     async function loadPlaylist(playlistId) {
         try {
@@ -119,6 +120,7 @@
             
             if (response.ok) {
                 currentPlaylist = songs;
+                allSongs = songs;
                 displaySongs(songs);
                 console.log('Şarkılar gösterildi');
             } else {
@@ -176,12 +178,11 @@
                 const response = await fetch('/api/songs/status');
                 const data = await response.json();
                 if (response.ok) {
-                    isPlaying = data.is_playing;
-                    document.getElementById('playPauseIcon').textContent = isPlaying ? '⏸️' : '▶️';
-                    document.getElementById('volumeSlider').value = data.volume;
-                    
-                    currentPosition = data.position;
-                    totalDuration = data.duration;
+                    // Süreleri güncelle
+                    document.getElementById('playerCurrentTime').textContent = formatTime(data.position);
+                    document.getElementById('playerTotalTime').textContent = formatTime(data.duration);
+                    document.getElementById('playerSeekBar').max = Math.floor(data.duration);
+                    document.getElementById('playerSeekBar').value = Math.floor(data.position);
                 }
             } catch (error) {
                 console.error('Durum kontrolü hatası:', error);
@@ -190,27 +191,38 @@
     }, 1000);
 
     async function playSong(videoId) {
-        try {
-            const response = await fetch(`/api/play/${videoId}`);
-            const data = await response.json();
-            if (response.ok) {
-                if (currentSong === videoId) {
-                    await stopSong();
-                    currentSong = null;
-                    isPlaying = false;
-                } else {
-                    currentSong = videoId;
-                    isPlaying = true;
-                    showNowPlaying(data.title, data.artist);
-                    document.getElementById('playPauseIcon').textContent = '⏸️';
-                }
+        const song = allSongs.find(s => s.id === videoId);
+        fetch(`/api/play/${videoId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: song ? song.title : '',
+                artist: song ? song.artist : '',
+                duration: song && song.duration ? parseDuration(song.duration) : 0
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (currentSong === videoId) {
+                stopSong();
+                currentSong = null;
+                isPlaying = false;
+                document.getElementById('bottomPlayer').style.display = 'none';
             } else {
-                alert(data.error || 'Şarkı çalınamadı!');
+                currentSong = videoId;
+                isPlaying = true;
+                showBottomPlayer(data.title, data.artist, data.duration);
             }
-        } catch (error) {
-            console.error('Şarkı çalma hatası:', error);
-            alert('Şarkı çalınamadı!');
-        }
+        });
+    }
+
+    // "03:45" gibi bir süreyi saniyeye çevirir
+    function parseDuration(durationStr) {
+        if (!durationStr) return 0;
+        const parts = durationStr.split(':').map(Number);
+        if (parts.length === 2) return parts[0] * 60 + parts[1];
+        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        return Number(durationStr) || 0;
     }
 
     async function togglePlayPause() {
@@ -240,7 +252,7 @@
             const response = await fetch('/api/songs/stop');
             const data = await response.json();
             if (response.ok) {
-                hideNowPlaying();
+                document.getElementById('bottomPlayer').style.display = 'none';
                 isPlaying = false;
                 currentSong = null;
                 document.getElementById('playPauseIcon').textContent = '▶️';
@@ -281,31 +293,91 @@
             setVolume(50);
         }
     }
-
-    function showNowPlaying(title, artist) {
-        const nowPlaying = document.getElementById('nowPlaying');
-        const musicPanel = document.querySelector('.music-panel');
-        if (nowPlaying) {
-            nowPlaying.innerHTML = `
-                <div class="now-playing">
-                    <h3>Şu an çalıyor:</h3>
-                    <p>${title} - ${artist}</p>
-                </div>
-            `;
-            nowPlaying.style.display = 'block';
-            musicPanel.classList.add('visible');
-        }
-    }
-
-    function hideNowPlaying() {
-        const nowPlaying = document.getElementById('nowPlaying');
-        const musicPanel = document.querySelector('.music-panel');
-        if (nowPlaying) {
-            nowPlaying.style.display = 'none';
-            musicPanel.classList.remove('visible');
-        }
-    }
+    </script>
+    <script>
+    // Basit arama fonksiyonu
+    document.addEventListener('DOMContentLoaded', function() {
+        // Arama formu submit
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = document.getElementById('searchBox').value.trim().toLowerCase();
+            if (!query) {
+                displaySongs(allSongs);
+                return;
+            }
+            const filtered = allSongs.filter(song => song.title && song.title.toLowerCase().includes(query));
+            displaySongs(filtered);
+        });
+    });
     </script>
     <script src="/static/script.js"></script>
+    <script>
+    // Alt menüde şarkı bilgisi ve kontrolleri
+    let playerDuration = 0;
+    let playerInterval = null;
+
+    function showBottomPlayer(title, artist, duration) {
+        document.getElementById('playerSongTitle').textContent = title;
+        document.getElementById('playerSongArtist').textContent = artist;
+        document.getElementById('bottomPlayer').style.display = 'flex';
+        playerDuration = duration || 0;
+        document.getElementById('playerTotalTime').textContent = formatTime(playerDuration);
+        document.getElementById('playerSeekBar').max = playerDuration;
+        document.getElementById('playerSeekBar').value = 0;
+        document.getElementById('playerCurrentTime').textContent = "00:00";
+        if (playerInterval) clearInterval(playerInterval);
+        playerInterval = setInterval(updatePlayerTime, 1000);
+    }
+
+    function hideBottomPlayer() {
+        document.getElementById('bottomPlayer').style.display = 'none';
+        if (playerInterval) clearInterval(playerInterval);
+    }
+
+    function updatePlayerTime() {
+        // Burada backend'den gerçek zaman alınabilir, örnek için slider ile ilerletiyoruz
+        let seekBar = document.getElementById('playerSeekBar');
+        let current = parseInt(seekBar.value);
+        if (current < playerDuration) {
+            seekBar.value = current + 1;
+            document.getElementById('playerCurrentTime').textContent = formatTime(current + 1);
+        } else {
+            clearInterval(playerInterval);
+        }
+    }
+
+    document.getElementById('playerSeekBar').addEventListener('change', function(e) {
+        fetch(`/api/songs/seek/${e.target.value}`);
+    });
+
+    document.getElementById('playerVolumeBar').addEventListener('input', function(e) {
+        setVolume(e.target.value);
+        const icon = document.getElementById('playerVolumeIcon');
+        if (e.target.value == 0) {
+            icon.src = "/static/images/nonvolume-icon.png";
+        } else {
+            icon.src = "/static/images/volume-icon.png";
+        }
+    });
+
+    function formatTime(seconds) {
+        seconds = parseInt(seconds);
+        if (isNaN(seconds)) return "00:00";
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    // Örnek: Bir şarkı çalınca çağır
+    // showBottomPlayer("Şarkı Adı", "Sanatçı", 210);
+    </script>
+    <script>
+    window.addEventListener('unload', function (e) {
+        navigator.sendBeacon('/api/stop');
+    });
+    window.addEventListener('beforeunload', function (e) {
+        navigator.sendBeacon('/api/stop');
+    });
+    </script>
 </body>
 </html>

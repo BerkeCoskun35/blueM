@@ -15,7 +15,7 @@
         </nav>
     </header>
     
-    <div class="content">
+    <div class="content auth-content">
         <div class="login-container">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -42,7 +42,6 @@
                         </button>
                     </div>
                 </div>
-                <a href="#" class="forgot-password">Şifremi unuttum</a>
                 <button type="submit" class="login-button">Giriş Yap</button>
                 <div class="register-link">
                     <span>Bir hesabın yok mu? </span>

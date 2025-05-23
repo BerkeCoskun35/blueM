@@ -65,6 +65,7 @@ def get_playlist_songs():
                     'duration': entry.get('duration_string', ''),
                     'thumbnail_url': entry.get('thumbnail', '')
                 })
+            random.shuffle(songs)
             return songs
     except Exception as e:
         print(f"Playlist yükleme hatası: {str(e)}")
@@ -406,14 +407,23 @@ def api_playlist():
     songs = get_playlist_songs()
     return jsonify(songs)
 
-@app.route('/api/play/<video_id>')
+@app.route('/api/play/<video_id>', methods=['POST'])
 def api_play(video_id):
     global current_song, player_thread
     current_song = video_id
+    data = request.get_json()
+    title = data.get('title', '')
+    artist = data.get('artist', '')
+    duration = data.get('duration', 0)
     player_thread = threading.Thread(target=play_song_in_background, args=(video_id,))
     player_thread.daemon = True
     player_thread.start()
-    return jsonify({'message': 'Çalıyor'})
+    return jsonify({
+        'message': 'Çalıyor',
+        'title': title,
+        'artist': artist,
+        'duration': duration
+    })
 
 @app.route('/api/stop')
 def api_stop():
