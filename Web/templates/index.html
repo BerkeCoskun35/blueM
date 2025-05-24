@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ana Sayfa</title>
+    <title>blueM</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -56,11 +56,12 @@
                 <div id="playerSongArtist" style="font-size:0.95em;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sanatçı</div>
             </div>
             <div style="flex:1;display:flex;align-items:center;gap:12px;max-width:700px;">
+                <button id="playPauseButton" onclick="togglePlayPause()" style="background:none;border:none;cursor:pointer;color:white;font-size:24px;">▶</button>
                 <span id="playerCurrentTime" style="width:48px;text-align:right;">00:00</span>
                 <input type="range" id="playerSeekBar" min="0" max="100" value="0" style="flex:1;accent-color:#4a9eff;">
                 <span id="playerTotalTime" style="width:48px;text-align:left;">00:00</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;min-width:120px;margin-right:150px;">
+            <div style="display:flex;align-items:center;gap:16px;min-width:120px;margin-right:150px;">
                 <img id="playerVolumeIcon" src="/static/images/volume-icon.png" alt="Ses" style="width:24px;height:24px;">
                 <input type="range" id="playerVolumeBar" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff;">
             </div>
@@ -207,10 +208,10 @@
                 stopSong();
                 currentSong = null;
                 isPlaying = false;
-                document.getElementById('bottomPlayer').style.display = 'none';
             } else {
                 currentSong = videoId;
                 isPlaying = true;
+                document.getElementById('playPauseButton').textContent = '⏸';
                 showBottomPlayer(data.title, data.artist, data.duration);
             }
         });
@@ -228,18 +229,18 @@
     async function togglePlayPause() {
         try {
             if (!currentSong) return;
-            const icon = document.getElementById('playPauseIcon');
+            const button = document.getElementById('playPauseButton');
             if (isPlaying) {
                 const response = await fetch('/api/songs/pause');
                 if (response.ok) {
                     isPlaying = false;
-                    icon.textContent = '▶️';
+                    button.textContent = '▶';
                 }
             } else {
                 const response = await fetch('/api/songs/resume');
                 if (response.ok) {
                     isPlaying = true;
-                    icon.textContent = '⏸️';
+                    button.textContent = '⏸';
                 }
             }
         } catch (error) {
@@ -252,10 +253,10 @@
             const response = await fetch('/api/songs/stop');
             const data = await response.json();
             if (response.ok) {
-                document.getElementById('bottomPlayer').style.display = 'none';
+                hideNowPlaying();
                 isPlaying = false;
                 currentSong = null;
-                document.getElementById('playPauseIcon').textContent = '▶️';
+                document.getElementById('playPauseButton').textContent = '▶';
                 currentPosition = 0;
                 totalDuration = 0;
             } else {
@@ -305,7 +306,24 @@
                 displaySongs(allSongs);
                 return;
             }
-            const filtered = allSongs.filter(song => song.title && song.title.toLowerCase().includes(query));
+            const filtered = allSongs.filter(song => 
+                (song.title && song.title.toLowerCase().includes(query)) || 
+                (song.artist && song.artist.toLowerCase().includes(query))
+            );
+            displaySongs(filtered);
+        });
+
+        // Anlık arama için input event listener ekle
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const query = e.target.value.trim().toLowerCase();
+            if (!query) {
+                displaySongs(allSongs);
+                return;
+            }
+            const filtered = allSongs.filter(song => 
+                (song.title && song.title.toLowerCase().includes(query)) || 
+                (song.artist && song.artist.toLowerCase().includes(query))
+            );
             displaySongs(filtered);
         });
     });
@@ -317,16 +335,11 @@
     let playerInterval = null;
 
     function showBottomPlayer(title, artist, duration) {
+        const bottomPlayer = document.getElementById('bottomPlayer');
         document.getElementById('playerSongTitle').textContent = title;
         document.getElementById('playerSongArtist').textContent = artist;
-        document.getElementById('bottomPlayer').style.display = 'flex';
-        playerDuration = duration || 0;
-        document.getElementById('playerTotalTime').textContent = formatTime(playerDuration);
-        document.getElementById('playerSeekBar').max = playerDuration;
-        document.getElementById('playerSeekBar').value = 0;
-        document.getElementById('playerCurrentTime').textContent = "00:00";
-        if (playerInterval) clearInterval(playerInterval);
-        playerInterval = setInterval(updatePlayerTime, 1000);
+        document.getElementById('playerTotalTime').textContent = formatTime(duration);
+        bottomPlayer.style.display = 'flex';
     }
 
     function hideBottomPlayer() {
@@ -361,23 +374,14 @@
     });
 
     function formatTime(seconds) {
-        seconds = parseInt(seconds);
-        if (isNaN(seconds)) return "00:00";
-        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
+        if (!seconds) return '00:00';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
 
     // Örnek: Bir şarkı çalınca çağır
     // showBottomPlayer("Şarkı Adı", "Sanatçı", 210);
-    </script>
-    <script>
-    window.addEventListener('unload', function (e) {
-        navigator.sendBeacon('/api/stop');
-    });
-    window.addEventListener('beforeunload', function (e) {
-        navigator.sendBeacon('/api/stop');
-    });
     </script>
 </body>
 </html>
