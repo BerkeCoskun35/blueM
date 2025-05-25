@@ -60,6 +60,7 @@ def get_playlist_songs():
             for entry in playlist_info['entries']:
                 songs.append({
                     'id': entry.get('id', ''),
+                    'video_id': entry.get('id', ''),
                     'title': entry.get('title', ''),
                     'artist': entry.get('uploader', ''),
                     'duration': entry.get('duration_string', ''),
@@ -108,11 +109,22 @@ class Song(db.Model):
     duration = db.Column(db.String(50))
     thumbnail_url = db.Column(db.String(255))
 
+class Favorite(db.Model):
+    __tablename__ = 'favorites'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    video_id = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    artist = db.Column(db.String(255), nullable=False)
+    thumbnail_url = db.Column(db.String(255))
+    user = db.relationship('User', backref=db.backref('favorites', lazy='dynamic'))
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
@@ -503,6 +515,73 @@ def seek_song(position):
         return jsonify({'message': 'Çalan şarkı yok'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/favorite/add', methods=['POST'])
+@login_required
+def add_favorite():
+    data = request.get_json()
+    video_id = data.get('song_id')
+    title = data.get('title')
+    artist = data.get('artist')
+    thumbnail_url = data.get('thumbnail_url')
+    
+    if not video_id or not title or not artist:
+        return jsonify({'error': 'Gerekli bilgiler eksik!'}), 400
+        
+    # Zaten favori mi?
+    existing = Favorite.query.filter_by(user_id=current_user.id, video_id=video_id).first()
+    if existing:
+        return jsonify({'message': 'Zaten favorilerde!'}), 200
+        
+    fav = Favorite(
+        user_id=current_user.id,
+        video_id=video_id,
+        title=title,
+        artist=artist,
+        thumbnail_url=thumbnail_url
+    )
+    db.session.add(fav)
+    db.session.commit()
+    return jsonify({'message': 'Favorilere eklendi!'}), 201
+
+@app.route('/api/favorite/remove', methods=['POST'])
+@login_required
+def remove_favorite():
+    data = request.get_json()
+    video_id = data.get('song_id')
+    if not video_id:
+        return jsonify({'error': 'Video ID gerekli!'}), 400
+        
+    fav = Favorite.query.filter_by(user_id=current_user.id, video_id=video_id).first()
+    if not fav:
+        return jsonify({'message': 'Favorilerde yok!'}), 200
+        
+    db.session.delete(fav)
+    db.session.commit()
+    return jsonify({'message': 'Favorilerden çıkarıldı!'}), 200
+
+@app.route('/api/favorites')
+@login_required
+def get_favorites():
+    favs = Favorite.query.filter_by(user_id=current_user.id).all()
+    songs = []
+    for fav in favs:
+        songs.append({
+            'id': fav.video_id,
+            'title': fav.title,
+            'artist': fav.artist,
+            'video_id': fav.video_id,
+            'thumbnail_url': fav.thumbnail_url
+        })
+    return jsonify(songs), 200
+
+@app.route('/library')
+@login_required
+def library():
+    return render_template('library.html')
+
+print('Tüm endpointler:')
+print(app.url_map)
 
 if __name__ == '__main__':
     with app.app_context():

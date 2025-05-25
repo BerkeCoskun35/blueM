@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitaplık - Favorilerim</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <nav>
+            <ul>
+                <li><button id="menuToggle" class="nav-button"><img src="{{ url_for('static', filename='images/buttonMenu.png') }}" alt="Menü" class="menu-icon"></button></li>
+                <li><a href="{{ url_for('index') }}" class="logo-button"><img src="{{ url_for('static', filename='images/buttonLogo.png') }}" alt="Logo" class="logo-icon"></a></li>
+                <li class="user-button-container">
+                    <a href="{{ url_for('profile') }}" class="user-button">
+                        <img src="{{ url_for('static', filename='images/buttonUser.png') }}" alt="Profil" class="user-icon">
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    <div id="sideMenu" class="side-menu">
+        <ul>
+            <li><a href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='images/buttonHomePage.png') }}" alt="Ana Sayfa" class="menu-item-icon">
+                <span>Ana Sayfa</span>
+            </a></li>
+            <li><a href="{{ url_for('library') }}">
+                <img src="{{ url_for('static', filename='images/buttonLibrary.png') }}" alt="Kitaplık" class="menu-item-icon">
+                <span>Kitaplık</span>
+            </a></li>
+        </ul>
+    </div>
+    <div class="content">
+        <h2 style="color:#fff;margin-bottom:24px;">Favori Müziklerim</h2>
+        <div id="musicGrid" class="music-grid">
+            <!-- Favori şarkılar JavaScript ile yüklenecek -->
+        </div>
+        <div id="bottomPlayer" style="position:fixed;left:0;right:0;bottom:0;width:100vw;background:#181818;box-shadow:0 -2px 10px rgba(0,0,0,0.7);color:#fff;display:none;align-items:center;justify-content:space-between;z-index:2000;padding:12px 32px;gap:32px;min-height:64px;">
+            <div style="min-width:200px;max-width:320px;overflow:hidden;">
+                <div id="playerSongTitle" style="font-weight:bold;font-size:1.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Şarkı Adı</div>
+                <div id="playerSongArtist" style="font-size:0.95em;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sanatçı</div>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;gap:12px;max-width:700px;">
+                <button id="playPauseButton" onclick="togglePlayPause()" style="background:none;border:none;cursor:pointer;color:white;font-size:24px;">▶</button>
+                <span id="playerCurrentTime" style="width:48px;text-align:right;">00:00</span>
+                <input type="range" id="playerSeekBar" min="0" max="100" value="0" style="flex:1;accent-color:#4a9eff;">
+                <span id="playerTotalTime" style="width:48px;text-align:left;">00:00</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;min-width:120px;margin-right:150px;">
+                <img id="playerVolumeIcon" src="/static/images/volume-icon.png" alt="Ses" style="width:24px;height:24px;">
+                <input type="range" id="playerVolumeBar" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff;">
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Menü açma/kapama kodları (index.html ile aynı)
+        const menuToggle = document.getElementById('menuToggle');
+        const sideMenu = document.getElementById('sideMenu');
+        const content = document.querySelector('.content');
+        const isMenuOpen = localStorage.getItem('menuOpen') === 'true';
+        if (isMenuOpen) {
+            sideMenu.classList.add('active');
+            content.classList.add('shifted');
+        }
+        menuToggle.addEventListener('click', function(event) {
+            event.stopPropagation();
+            sideMenu.classList.toggle('active');
+            content.classList.toggle('shifted');
+            localStorage.setItem('menuOpen', sideMenu.classList.contains('active'));
+        });
+        document.addEventListener('click', function(event) {
+            if (!sideMenu.contains(event.target) && !menuToggle.contains(event.target) && sideMenu.classList.contains('active')) {
+                sideMenu.classList.remove('active');
+                content.classList.remove('shifted');
+                localStorage.setItem('menuOpen', 'false');
+            }
+        });
+        // Favori şarkıları yükle
+        loadFavorites();
+    });
+    let currentSong = null;
+    let isPlaying = false;
+    let allSongs = [];
+    async function loadFavorites() {
+        try {
+            const response = await fetch('/api/favorites');
+            const songs = await response.json();
+            if (response.ok) {
+                allSongs = songs;
+                displaySongs(songs);
+            } else {
+                document.getElementById('musicGrid').innerHTML = '<div style="color:#fff;">Favori müzik bulunamadı.</div>';
+            }
+        } catch (error) {
+            document.getElementById('musicGrid').innerHTML = '<div style="color:#fff;">Favori müzikler yüklenemedi.</div>';
+        }
+    }
+    function displaySongs(songs) {
+        const musicGrid = document.getElementById('musicGrid');
+        musicGrid.innerHTML = '';
+        songs.forEach(song => {
+            const songCard = document.createElement('div');
+            songCard.className = 'music-card';
+            songCard.setAttribute('data-video-id', song.video_id);
+            songCard.onclick = () => playSong(song.video_id);
+            songCard.innerHTML = `
+<img src="https://img.youtube.com/vi/${song.video_id}/hqdefault.jpg" alt="${song.title}" class="album-cover">
+<div class="music-info">
+    <h3 title="${song.title}">${song.title}</h3>
+    <p>${song.artist}</p>
+</div>
+<button class="favorite-btn" data-song-id="${song.video_id}" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:24px;z-index:2;">
+    <span class="heart-icon">❤️</span>
+</button>
+`;
+            musicGrid.appendChild(songCard);
+        });
+        
+        // Kalp butonlarına event ekle
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const songId = this.getAttribute('data-song-id');
+                fetch('/api/favorite/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ song_id: songId })
+                }).then(res => {
+                    if (res.ok) {
+                        // Şarkıyı listeden kaldır
+                        const songCard = this.closest('.music-card');
+                        songCard.remove();
+                        // Eğer hiç favori kalmadıysa mesaj göster
+                        if (document.querySelectorAll('.music-card').length === 0) {
+                            document.getElementById('musicGrid').innerHTML = '<div style="color:#fff;">Favori müzik bulunamadı.</div>';
+                        }
+                    }
+                });
+            });
+        });
+    }
+    async function playSong(videoId) {
+        const song = allSongs.find(s => s.video_id === videoId);
+        fetch(`/api/play/${videoId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: song ? song.title : '',
+                artist: song ? song.artist : '',
+                duration: song && song.duration ? parseDuration(song.duration) : 0
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (currentSong === videoId) {
+                stopSong();
+                currentSong = null;
+                isPlaying = false;
+            } else {
+                currentSong = videoId;
+                isPlaying = true;
+                document.getElementById('playPauseButton').textContent = '⏸';
+                showBottomPlayer(data.title, data.artist, data.duration);
+            }
+        });
+    }
+    // Player ve diğer fonksiyonlar index.html ile aynı şekilde eklenebilir
+    </script>
+</body>
+</html>

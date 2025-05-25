@@ -39,7 +39,7 @@
                 <img src="{{ url_for('static', filename='images/buttonHomePage.png') }}" alt="Ana Sayfa" class="menu-item-icon">
                 <span>Ana Sayfa</span>
             </a></li>
-            <li><a href="#">
+            <li><a href="{{ url_for('library') }}">
                 <img src="{{ url_for('static', filename='images/buttonLibrary.png') }}" alt="Kitaplık" class="menu-item-icon">
                 <span>Kitaplık</span>
             </a></li>
@@ -136,39 +136,71 @@
         console.log('Şarkılar gösteriliyor:', songs.length);
         const musicGrid = document.getElementById('musicGrid');
         musicGrid.innerHTML = '';
-        
-        songs.forEach(song => {
-            console.log('Şarkı kartı oluşturuluyor:', song.title);
-            const songCard = document.createElement('div');
-            songCard.className = 'music-card';
-            songCard.setAttribute('data-video-id', song.id);
-            songCard.onclick = () => playSong(song.id);
-            
-            songCard.innerHTML = `
-    <img src="https://img.youtube.com/vi/${song.id}/hqdefault.jpg" alt="${song.title}" class="album-cover">
-    <div class="music-info">
-        <h3 title="${song.title}">${song.title}</h3>
-        <p>${song.artist}</p>
-    </div>
+        // Önce kullanıcının favorilerini çek
+        fetch('/api/favorites').then(res => res.json()).then(favorites => {
+            const favoriteIds = favorites.map(f => f.id);
+            songs.forEach(song => {
+                const songCard = document.createElement('div');
+                songCard.className = 'music-card';
+                songCard.setAttribute('data-song-id', song.video_id);
+                songCard.onclick = () => playSong(song.video_id);
+                const isFav = favoriteIds.includes(song.video_id);
+                songCard.innerHTML = `
+<img src="https://img.youtube.com/vi/${song.video_id}/hqdefault.jpg" alt="${song.title}" class="album-cover">
+<div class="music-info">
+    <h3 title="${song.title}">${song.title}</h3>
+    <p>${song.artist}</p>
+</div>
+<button class="favorite-btn" data-song-id="${song.video_id}" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:24px;z-index:2;">
+    <span class="heart-icon">${isFav ? '❤️' : '♡'}</span>
+</button>
 `;
-            
-            musicGrid.appendChild(songCard);
+                musicGrid.appendChild(songCard);
+            });
+            // Kalp butonlarına event ekle
+            document.querySelectorAll('.favorite-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const songId = this.getAttribute('data-song-id');
+                    const heart = this.querySelector('.heart-icon');
+                    const song = allSongs.find(s => s.video_id === songId);
+                    if (heart.textContent === '♡') {
+                        fetch('/api/favorite/add', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                song_id: songId,
+                                title: song.title,
+                                artist: song.artist,
+                                thumbnail_url: song.thumbnail_url
+                            })
+                        }).then(res => {
+                            if (res.ok) heart.textContent = '❤️';
+                        });
+                    } else {
+                        fetch('/api/favorite/remove', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ song_id: songId })
+                        }).then(res => {
+                            if (res.ok) heart.textContent = '♡';
+                        });
+                    }
+                });
+            });
         });
-
         setTimeout(() => {
-    document.querySelectorAll('.music-info h3').forEach(h3 => {
-        h3.addEventListener('mouseenter', function() {
-            // Eğer metin sığmıyorsa scroll efekti ekle
-            if (h3.scrollWidth > h3.clientWidth) {
-                h3.classList.add('scrolling');
-            }
-        });
-        h3.addEventListener('mouseleave', function() {
-            h3.classList.remove('scrolling');
-        });
-    });
-}, 100);
-
+            document.querySelectorAll('.music-info h3').forEach(h3 => {
+                h3.addEventListener('mouseenter', function() {
+                    if (h3.scrollWidth > h3.clientWidth) {
+                        h3.classList.add('scrolling');
+                    }
+                });
+                h3.addEventListener('mouseleave', function() {
+                    h3.classList.remove('scrolling');
+                });
+            });
+        }, 100);
         console.log('Tüm şarkı kartları oluşturuldu');
     }
 
@@ -192,7 +224,7 @@
     }, 1000);
 
     async function playSong(videoId) {
-        const song = allSongs.find(s => s.id === videoId);
+        const song = allSongs.find(s => s.video_id === videoId);
         fetch(`/api/play/${videoId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
